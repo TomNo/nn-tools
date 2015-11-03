@@ -78,7 +78,7 @@ def k2hdf(options):
         # must be done like this because torch-hdf5 does not support strings nor attributes:'(
         for index, tag in enumerate(tags):
             g = o_file.create_group(tag)
-            if options.forward_pass:
+            if not options.forward_pass:
                 g.create_dataset("labels", data=l_dict[tag])
             g.create_dataset("data", data=mats[index].flatten())
             g.create_dataset("cols", data=[len(mats[index][0])])
@@ -106,11 +106,12 @@ parser.add_argument('-o', '--output-file', dest='output_file', action='store', t
 options = parser.parse_args()
 
 if options.action.startswith("kaldi") and (not options.features or not options.labels):
-    if options.forward_pass:
+    if options.forward_pass and not options.features:
         print("Error:Missing features.")
-    else:
+        sys.exit(1)
+    elif not options.forward_pass:
         print("Error:Missing features or label files.")
-    sys.exit(1)
+        sys.exit(1)
 
 if not options.action.startswith("kaldi") and not options.net_output:
     print("Error:Missing net output filename.")
