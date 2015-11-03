@@ -90,9 +90,8 @@ def hdf2k(options):
     with h5py.File(options.net_output) as i_file:
         with open(options.output_file, "w") as o_file:
             for key, item in i_file.items():
-                if key != 'i_size':
-                    mat, cols, rows = item["data"], item["cols"][0], item["rows"][0]
-                    kaldi_io.write_mat(o_file, mat.value.reshape(cols, rows), key)
+                mat, cols, rows = item["data"], item["cols"][0], item["rows"][0]
+                kaldi_io.write_mat(o_file, mat.value.reshape(rows, cols), key)
 
 usage = 'usage: %prog [options]'
 parser = argparse.ArgumentParser(usage)
