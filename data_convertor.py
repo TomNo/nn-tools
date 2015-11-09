@@ -23,8 +23,8 @@ class Convertor(object):
             raise Exception("Unsupported action.")
 
     def kaldi_convert(self):
+        self.get_kaldi_data()
         if self.options.deltas_order > 0:
-            self.get_kaldi_data()
             self.add_deltas()
         if self.options.normalize:
             self.normalize()
@@ -42,21 +42,22 @@ class Convertor(object):
         if not self.options.mean:
             for mat in self.mats:
                 m+=mat.mean()
+            m /= float(len(self.mats))
         else:
             m=self.options.mean
 
         if not self.options.std:
             for mat in self.mats:
                 std+=mat.std()
+            std /= float(len(self.mats))
         else:
             std = self.options.std
 
-        m /= float(len(self.mats))
-        std /= float(len(self.mats))
-
         for i in xrange(len(self.mats)):
-            self.mats[i] -= m
-            self.mats[i] /= std
+            self.mats[i] = self.mats[i] - m
+            self.mats[i] = self.mats[i] / std
+        print("Std: " + str(std))
+        print("Mean: " + str(m))
 
     def get_kaldi_data(self):
         """Gets kaldi tags, features and alignments."""
