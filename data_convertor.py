@@ -65,10 +65,25 @@ class Convertor(object):
         mats = []
         sizes = []
         l_dict = {}
+        skipped = 0
+        missing_labels = []
+        f_reader = None
+        if self.options.features.endswith(".scp"):
+            f_reader = kaldi_io.read_mat_scp
+        else:
+            f_reader = kaldi_io.read_mat_ark
         if not self.options.forward_pass:
             for tag, l in kaldi_io.read_ali_ark(self.options.labels):
-                l_dict[tag] = l
-        for tag, mat in kaldi_io.read_mat_scp(self.options.features):
+                if tag not in l_dict:
+                    l_dict[tag] = l
+                else:
+                    raise KeyError("Tag is: " + tag + "is already present.")
+
+        for tag, mat in f_reader(self.options.features):
+            if not self.options.forward_pass and tag not in l_dict:
+                skipped += 1
+                missing_labels.append(tag)
+                continue
             tags.append(tag)
             mats.append(mat)
             sizes.append(len(mat))
@@ -80,6 +95,9 @@ class Convertor(object):
         self.mats = mats
         self.sizes = sizes
         self.l_dict = l_dict
+        if skipped != 0:
+            print("Missing labels: " + str(skipped))
+            print(missing_labels)
 
     def k2nc(self):
         """Convert kaldi data to netcdf format (currennt)."""
