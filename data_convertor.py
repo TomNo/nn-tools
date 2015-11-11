@@ -67,17 +67,15 @@ class Convertor(object):
         l_dict = {}
         skipped = 0
         missing_labels = []
-        f_reader = None
         if self.options.features.endswith(".scp"):
             f_reader = kaldi_io.read_mat_scp
         else:
             f_reader = kaldi_io.read_mat_ark
-        if not self.options.forward_pass:
-            for tag, l in kaldi_io.read_ali_ark(self.options.labels):
-                if tag not in l_dict:
-                    l_dict[tag] = l
-                else:
-                    raise KeyError("Tag is: " + tag + "is already present.")
+        for tag, l in kaldi_io.read_ali_ark(self.options.labels):
+            if tag not in l_dict:
+                l_dict[tag] = l
+            else:
+                raise KeyError("Tag is: " + tag + "is already present.")
 
         for tag, mat in f_reader(self.options.features):
             if not self.options.forward_pass and tag not in l_dict:
@@ -107,9 +105,7 @@ class Convertor(object):
         for mat in self.mats:
             for line in mat:
                 inputs.append(line)
-        num_labels = 0
-        if not self.options.forward_pass:
-            num_labels = max(max(self.l_dict.values(), key=max)) + 1
+        num_labels = max(max(self.l_dict.values(), key=max)) + 1
 
         def c_var(vname, data, vtype, dims):
             nc_var = o_file.createVariable (vname,vtype,dims)
@@ -178,12 +174,8 @@ if "nc" in options.action:
     from Scientific.IO.NetCDF import NetCDFFile
 
 if options.action.startswith("kaldi") and (not options.features or not options.labels):
-    if options.forward_pass and not options.features:
-        print("Error:Missing features.")
-        sys.exit(1)
-    elif not options.forward_pass:
-        print("Error:Missing features or label files.")
-        sys.exit(1)
+    print("Error:Missing features or label files.")
+    sys.exit(1)
 
 if not options.action.startswith("kaldi"):
     if options.normalize != False:
