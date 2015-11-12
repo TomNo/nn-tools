@@ -140,7 +140,7 @@ class Convertor(object):
         with h5py.File(self.options.output_file, "w") as o_file:
             # must be done like this because torch-hdf5 does not support strings nor attributes:'(
             for index, tag in enumerate(self.tags):
-                g = o_file.create_group(tag)
+                g = o_file.create_group("/" + str(index) + "/" + tag)
                 if not self.options.forward_pass:
                     g.create_dataset("labels", data=self.l_dict[tag])
                 g.create_dataset("data", data=self.mats[index].flatten())
@@ -153,7 +153,7 @@ class Convertor(object):
             with open(self.options.output_file, "w") as o_file:
                 for key, item in i_file.items():
                     mat, cols, rows = item["data"], item["cols"][0], item["rows"][0]
-                    kaldi_io.write_mat(o_file, mat.value.reshape(rows, cols), key)
+                    kaldi_io.write_mat(o_file, mat.value.reshape(rows, cols), key.split("/")[2])
 
 usage = 'usage: %prog [options]'
 parser = argparse.ArgumentParser(usage)
