@@ -138,6 +138,8 @@ class Convertor(object):
     def k2hdf(self):
         """Converts kaldi data to hdf5"""
         with h5py.File(self.options.output_file, "w") as o_file:
+            r_count = 0
+            c_count = 0
             # must be done like this because torch-hdf5 does not support strings nor attributes:'(
             for index, tag in enumerate(self.tags):
                 g = o_file.create_group("/" + str(index) + "/" + tag)
@@ -146,7 +148,9 @@ class Convertor(object):
                 g.create_dataset("data", data=self.mats[index].flatten())
                 g.create_dataset("cols", data=[len(self.mats[index][0])])
                 g.create_dataset("rows", data=[len(self.mats[index])])
-
+                r_count+= len(self.mats[index])
+            o_file.create_dataset("rows", data=[r_count])
+            o_file.create_dataset("cols", data=[len(self.mats[-1][0])])
     def hdf2k(self):
         """Converts hdf5 format to kaldi matrix."""
         with h5py.File(self.options.net_output) as i_file:
