@@ -71,11 +71,12 @@ class Convertor(object):
             f_reader = kaldi_io.read_mat_scp
         else:
             f_reader = kaldi_io.read_mat_ark
-        for tag, l in kaldi_io.read_ali_ark(self.options.labels):
-            if tag not in l_dict:
-                l_dict[tag] = l
-            else:
-                raise KeyError("Tag is: " + tag + "is already present.")
+        if self.options.labels:
+            for tag, l in kaldi_io.read_ali_ark(self.options.labels):
+                if tag not in l_dict:
+                    l_dict[tag] = l
+                else:
+                    raise KeyError("Tag is: " + tag + "is already present.")
 
         for tag, mat in f_reader(self.options.features):
             if not self.options.forward_pass and tag not in l_dict:
@@ -139,7 +140,6 @@ class Convertor(object):
         """Converts kaldi data to hdf5"""
         with h5py.File(self.options.output_file, "w") as o_file:
             r_count = 0
-            c_count = 0
             # must be done like this because torch-hdf5 does not support strings nor attributes:'(
             for index, tag in enumerate(self.tags):
                 g = o_file.create_group("/" + str(index) + "/" + tag)
