@@ -178,8 +178,12 @@ if "nc" in options.action:
     from Scientific.IO.NetCDF import NetCDFFile
 
 if options.action.startswith("kaldi") and (not options.features or not options.labels):
-    print("Error:Missing features or label files.")
-    sys.exit(1)
+    if options.action.endswith("nc"):
+        print("Error:Missing features or label files.")
+        sys.exit(1)
+    elif not options.features:
+        print("Error:Missing features.")
+        sys.exit(1)
 
 if not options.action.startswith("kaldi"):
     if options.normalize != False:
@@ -188,6 +192,7 @@ if not options.action.startswith("kaldi"):
     if options.deltas_order != 0:
         print("Error:Deltas order must be 0 (Only used for from kaldi conversion)")
         sys.exit(1)
+
 if not options.action.startswith("kaldi") and not options.net_output:
     print("Error:Missing net output filename.")
     sys.exit(1)
