@@ -151,24 +151,26 @@ class Convertor(object):
                     r_count+= len(self.mats[index])
                 o_file.create_dataset("rows", data=[r_count])
                 o_file.create_dataset("cols", data=[len(self.mats[-1][0])])
-            else: # optimilized version for training/cv datasets
+            else: # optimized version for training/cv datasets
                 cols = len(self.mats[0][0])
                 o_file.create_dataset("cols", data=[cols])
                 all_tags = np.concatenate(self.l_dict.values())
                 del(self.l_dict)
                 all_mats = np.concatenate(self.mats)
                 del(self.mats)
-                o_file.create_dataset("2", data=all_tags, compression="gzip", compression_opts=9)
-                o_file.create_dataset("1", data=all_mats, compression="gzip", compression_opts=9)
-                o_file.create_dataset("rows", data=[len(all_mats) / cols])
+                rows = len(all_mats) / cols
+                all_mats.resize((rows, cols))
+                o_file.create_dataset("labels", data=all_tags, compression="gzip", compression_opts=9)
+                o_file.create_dataset("features", data=all_mats, compression="gzip", compression_opts=9)
+                o_file.create_dataset("rows", data=[rows])
 
     def hdf2k(self):
         """Converts hdf5 format to kaldi matrix."""
         with h5py.File(self.options.net_output) as i_file:
             with open(self.options.output_file, "w") as o_file:
                 for key, item in i_file.items():
-                    mat, cols, rows = item["data"], item["cols"][0], item["rows"][0]
-                    kaldi_io.write_mat(o_file, mat.value.reshape(rows, cols), key.split("/")[2])
+                    mat = item["data"]
+                    kaldi_io.write_mat(o_file, mat.value, key.split("/")[2])
 
 usage = 'usage: %prog [options]'
 parser = argparse.ArgumentParser(usage)
