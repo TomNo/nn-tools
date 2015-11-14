@@ -170,7 +170,7 @@ class Convertor(object):
             with open(self.options.output_file, "w") as o_file:
                 for key, item in i_file.items():
                     mat = item["data"]
-                    kaldi_io.write_mat(o_file, mat.value, key.split("/")[2])
+                    kaldi_io.write_mat(o_file, mat.value, key)
 
 usage = 'usage: %prog [options]'
 parser = argparse.ArgumentParser(usage)
@@ -180,7 +180,7 @@ parser.add_argument('--forward-pass', dest='forward_pass', action='store_true', 
 parser.add_argument('-l', '--labels', dest='labels', action='store', type=str, help='labels of the data')
 parser.add_argument('--net-output', dest='net_output', action='store', type=str, help='output of neural network in hdf file format')
 parser.add_argument('-o', '--output-file', dest='output_file', action='store', type=str,  help='output file name', required=True)
-parser.add_argument('--normalize', dest='normalize', action='store', type=bool,  help='normalize input, only usable for kaldi conversion', default=True)
+parser.add_argument('--normalize', dest='normalize', action='store', type=int, default=1, help='normalize input, only usable for kaldi conversion')
 parser.add_argument('--deltas-order', dest='deltas_order', action='store', type=int, help='add deltas, only usable for from kaldi conversion', default=0)
 parser.add_argument('--mean', dest="mean", action="store", type=float, help="mean that will be substracted from the input data", default=None)
 parser.add_argument('--std', dest="std", action="store", type=float, help="standard deviation that will divide input input data", default=None)
@@ -199,7 +199,7 @@ if options.action.startswith("kaldi") and (not options.features or not options.l
         sys.exit(1)
 
 if not options.action.startswith("kaldi"):
-    if options.normalize != False:
+    if options.normalize:
         print("Error:Normalization is done only when converting data from kaldi.")
         sys.exit(1)
     if options.deltas_order != 0:
