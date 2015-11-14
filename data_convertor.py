@@ -140,17 +140,28 @@ class Convertor(object):
         """Converts kaldi data to hdf5"""
         with h5py.File(self.options.output_file, "w") as o_file:
             r_count = 0
-            # must be done like this because torch-hdf5 does not support strings nor attributes:'(
-            for index, tag in enumerate(self.tags):
-                g = o_file.create_group("/" + str(index) + "/" + tag)
-                if not self.options.forward_pass:
-                    g.create_dataset("labels", data=self.l_dict[tag])
-                g.create_dataset("data", data=self.mats[index].flatten())
-                g.create_dataset("cols", data=[len(self.mats[index][0])])
-                g.create_dataset("rows", data=[len(self.mats[index])])
-                r_count+= len(self.mats[index])
-            o_file.create_dataset("rows", data=[r_count])
-            o_file.create_dataset("cols", data=[len(self.mats[-1][0])])
+            # test dataset - must be done like this because torch-hdf5 does
+            # not support strings nor attributes:'(
+            if self.options.forward_pass:
+                for index, tag in enumerate(self.tags):
+                    g = o_file.create_group("/" + str(index) + "/" + tag)
+                    g.create_dataset("data", data=self.mats[index].flatten())
+                    g.create_dataset("cols", data=[len(self.mats[index][0])])
+                    g.create_dataset("rows", data=[len(self.mats[index])])
+                    r_count+= len(self.mats[index])
+                o_file.create_dataset("rows", data=[r_count])
+                o_file.create_dataset("cols", data=[len(self.mats[-1][0])])
+            else: # optimilized version for training/cv datasets
+                cols = len(self.mats[0][0])
+                o_file.create_dataset("cols", data=[cols])
+                all_tags = np.concatenate(self.l_dict.values())
+                del(self.l_dict)
+                all_mats = np.concatenate(self.mats)
+                del(self.mats)
+                o_file.create_dataset("2", data=all_tags, compression="gzip", compression_opts=9)
+                o_file.create_dataset("1", data=all_mats, compression="gzip", compression_opts=9)
+                o_file.create_dataset("rows", data=[len(all_mats) / cols])
+
     def hdf2k(self):
         """Converts hdf5 format to kaldi matrix."""
         with h5py.File(self.options.net_output) as i_file:
