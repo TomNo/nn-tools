@@ -14,6 +14,25 @@ class Convertor(object):
     def __init__(self, options):
         self.options = options
 
+    def split_sequence(self, mat, tag, labels):
+        counter = 0
+        seq_size = self.options.resequence
+        assert len(mat) == len(labels), "Labels and seqs count does not match."
+        while True:
+            n_mat = mat[counter * seq_size: (counter + 1) * seq_size]
+            if len(n_mat) == 0:
+                break
+            self.mats.append(n_mat)
+            n_tag = tag + "_%s" % str(counter)
+            self.tags.append(n_tag)
+            if n_tag in self.l_dict:
+                raise KeyError("Label: %s already exists." % n_tag)
+            n_labels = labels[counter * seq_size: (counter + 1) * seq_size]
+            assert len(n_labels) != 0, "Empty labels"
+            self.l_dict[n_tag] = n_labels
+            counter += 1
+
+
     def convert(self):
         if self.options.action.startswith("kaldi"):
             self.kaldi_convert()
@@ -90,10 +109,24 @@ class Convertor(object):
             if not self.options.forward_pass:
                 if len(mat) != len(l_dict[tag]):
                     raise ValueError("Labels lengths does not match data length.")
-        self.tags = tags
-        self.mats = mats
-        self.sizes = sizes
-        self.l_dict = l_dict
+        if self.options.resequence:
+            # re-sequencing should be used only in the training mode
+            # not in forward pass
+            self.tags = []
+            self.mats = []
+            self.l_dict = {}
+            del(sizes)
+            for index in xrange(len(mats)):
+                mat = mats.pop()
+                tag = tags.pop()
+                self.split_sequence(mat, tag, l_dict[tag])
+                del(mat)
+                del(l_dict[tag])
+                del(tag)
+        else:
+            self.tags = tags
+            self.mats = mats
+            self.l_dict = l_dict
         if skipped != 0:
             print("Missing labels: " + str(skipped))
             print(missing_labels)
@@ -110,7 +143,7 @@ class Convertor(object):
 
         def c_var(vname, data, vtype, dims):
             nc_var = o_file.createVariable (vname,vtype,dims)
-            nc_var.assignValue(data)
+            nc_var[:] = data[:]
 
         labels = []
         if self.options.forward_pass:
@@ -153,16 +186,23 @@ class Convertor(object):
                 o_file.create_dataset("cols", data=[len(self.mats[-1][0])])
             else: # optimized version for training/cv datasets
                 cols = len(self.mats[0][0])
-                o_file.create_dataset("cols", data=[cols])
-                all_tags = np.concatenate(self.l_dict.values())
+                t_map = [(self.mats[i], k) for i, k in enumerate(self.tags)]
+                # sort by size -- bigger samples near each other to optimize
+                # mini batches
+                sorted(t_map, key=lambda x:-len(x[0]))
+                s_mats = [i[0] for i in t_map]
+                all_tags = np.concatenate([self.l_dict[i[1]] for i in t_map])
                 del(self.l_dict)
-                all_mats = np.concatenate(self.mats)
+                seq_sizes = [len(mat) for mat in s_mats]
+                all_mats = np.concatenate(s_mats)
                 del(self.mats)
                 rows = len(all_mats) / cols
                 all_mats.resize((rows, cols))
+                o_file.create_dataset("cols", data=[cols])
                 o_file.create_dataset("labels", data=all_tags, compression="gzip", compression_opts=9)
                 o_file.create_dataset("features", data=all_mats, compression="gzip", compression_opts=9)
                 o_file.create_dataset("rows", data=[rows])
+                o_file.create_dataset("seq_sizes", data=[seq_sizes])
 
     def hdf2k(self):
         """Converts hdf5 format to kaldi matrix."""
@@ -182,13 +222,17 @@ parser.add_argument('--net-output', dest='net_output', action='store', type=str,
 parser.add_argument('-o', '--output-file', dest='output_file', action='store', type=str,  help='output file name', required=True)
 parser.add_argument('--normalize', dest='normalize', action='store', type=int, default=1, help='normalize input, only usable for kaldi conversion')
 parser.add_argument('--deltas-order', dest='deltas_order', action='store', type=int, help='add deltas, only usable for from kaldi conversion', default=0)
+parser.add_argument('-r', '--resequence', dest="resequence", action="store", type=int, default=None, help='Re-sequence whole data set to given sequence length')
 parser.add_argument('--mean', dest="mean", action="store", type=float, help="mean that will be substracted from the input data", default=None)
 parser.add_argument('--std', dest="std", action="store", type=float, help="standard deviation that will divide input input data", default=None)
 
 options = parser.parse_args()
 
 if "nc" in options.action:
-    from Scientific.IO.NetCDF import NetCDFFile
+    # try:
+    #     from Scientific.IO.NetCDF import NetCDFFile
+    # except ImportError:
+    from netCDF4 import Dataset as NetCDFFile
 
 if options.action.startswith("kaldi") and (not options.features or not options.labels):
     if options.action.endswith("nc"):
