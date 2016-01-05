@@ -19,15 +19,23 @@ class Convertor(object):
         seq_size = self.options.resequence
         assert len(mat) == len(labels), "Labels and seqs count does not match."
         while True:
-            n_mat = mat[counter * seq_size: (counter + 1) * seq_size]
+            start = counter * seq_size
+            n_mat = mat[start: (counter + 1) * seq_size]
             if len(n_mat) == 0:
                 break
+
+            if len(n_mat) < self.options.resequence:
+                # in an event of shorter sequence add more data
+                miss = self.options.resequence - len(n_mat)
+                start -= miss
+                n_mat = mat[start: (counter + 1) * seq_size]
+
             self.mats.append(n_mat)
             n_tag = tag + "_%s" % str(counter)
             self.tags.append(n_tag)
             if n_tag in self.l_dict:
                 raise KeyError("Label: %s already exists." % n_tag)
-            n_labels = labels[counter * seq_size: (counter + 1) * seq_size]
+            n_labels = labels[start: (counter + 1) * seq_size]
             assert len(n_labels) != 0, "Empty labels"
             self.l_dict[n_tag] = n_labels
             counter += 1
@@ -186,20 +194,21 @@ class Convertor(object):
                 o_file.create_dataset("cols", data=[len(self.mats[-1][0])])
             else: # optimized version for training/cv datasets
                 cols = len(self.mats[0][0])
-                t_map = [(self.mats[i], k) for i, k in enumerate(self.tags)]
+                # print(len(self.mats))
+                # t_map = [(self.mats[i], k) for i, k in enumerate(self.tags)]
                 # sort by size -- bigger samples near each other to optimize
                 # mini batches
-                sorted(t_map, key=lambda x:-len(x[0]))
-                s_mats = [i[0] for i in t_map]
-                all_tags = np.concatenate([self.l_dict[i[1]] for i in t_map])
-                del(self.l_dict)
-                seq_sizes = [len(mat) for mat in s_mats]
-                all_mats = np.concatenate(s_mats)
+                # sorted(t_map, key=lambda x:-len(x[0]))
+                # s_mats = [i[0] for i in t_map]
+                labels = np.concatenate([np.array(self.l_dict[tag]) for tag in self.tags])
+                # del(self.l_dict)
+                seq_sizes = [len(mat) for mat in self.mats]
+                all_mats = np.concatenate(self.mats)
                 del(self.mats)
-                rows = len(all_mats) / cols
+                rows = len(all_mats)
                 all_mats.resize((rows, cols))
                 o_file.create_dataset("cols", data=[cols])
-                o_file.create_dataset("labels", data=all_tags, compression="gzip", compression_opts=9)
+                o_file.create_dataset("labels", data=labels, compression="gzip", compression_opts=9)
                 o_file.create_dataset("features", data=all_mats, compression="gzip", compression_opts=9)
                 o_file.create_dataset("rows", data=[rows])
                 o_file.create_dataset("seq_sizes", data=[seq_sizes])
