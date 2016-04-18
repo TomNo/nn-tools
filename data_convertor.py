@@ -194,17 +194,16 @@ class Convertor(object):
                 o_file.create_dataset("cols", data=[len(self.mats[-1][0])])
             else: # optimized version for training/cv datasets
                 cols = len(self.mats[0][0])
-                # print(len(self.mats))
-                # t_map = [(self.mats[i], k) for i, k in enumerate(self.tags)]
+                t_map = [(self.mats[i], self.tags[i]) for i in xrange(len(self.mats))]
                 # sort by size -- bigger samples near each other to optimize
                 # mini batches
-                # sorted(t_map, key=lambda x:-len(x[0]))
-                # s_mats = [i[0] for i in t_map]
-                labels = np.concatenate([np.array(self.l_dict[tag]) for tag in self.tags])
-                # del(self.l_dict)
-                seq_sizes = [len(mat) for mat in self.mats]
-                lab_sizes = [len(self.l_dict[tag]) for tag in self.tags]
-                all_mats = np.concatenate(self.mats)
+                t_map = sorted(t_map, key=lambda x:-len(x[0]))
+                s_mats = [i[0] for i in t_map]
+                s_tags = [i[1] for i in t_map]
+                labels = np.concatenate([np.array(self.l_dict[tag]) for tag in s_tags])
+                seq_sizes = [len(mat) for mat in s_mats]
+                lab_sizes = [len(self.l_dict[tag]) for tag in s_tags]
+                all_mats = np.concatenate(s_mats)
                 del(self.mats)
                 rows = len(all_mats)
                 all_mats.resize((rows, cols))
