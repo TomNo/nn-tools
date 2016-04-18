@@ -203,6 +203,7 @@ class Convertor(object):
                 labels = np.concatenate([np.array(self.l_dict[tag]) for tag in self.tags])
                 # del(self.l_dict)
                 seq_sizes = [len(mat) for mat in self.mats]
+                lab_sizes = [len(self.l_dict[tag]) for tag in self.tags]
                 all_mats = np.concatenate(self.mats)
                 del(self.mats)
                 rows = len(all_mats)
@@ -212,6 +213,7 @@ class Convertor(object):
                 o_file.create_dataset("features", data=all_mats, compression="gzip", compression_opts=9)
                 o_file.create_dataset("rows", data=[rows])
                 o_file.create_dataset("seq_sizes", data=[seq_sizes])
+                o_file.create_dataset("lab_sizes", data=[lab_sizes])
 
     def hdf2k(self):
         """Converts hdf5 format to kaldi matrix."""
