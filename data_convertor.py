@@ -114,9 +114,6 @@ class Convertor(object):
             mats.append(mat)
             sizes.append(len(mat))
 
-            if not self.options.forward_pass:
-                if len(mat) != len(l_dict[tag]):
-                    raise ValueError("Labels lengths does not match data length.")
         if self.options.resequence:
             # re-sequencing should be used only in the training mode
             # not in forward pass
